@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@import "simplebar-react/dist/simplebar.min.css";
+
 @layer base {
     html {
         @apply bg-black text-white font-sans text-pretty text-shadow-[1.25px_1.25px_3px_rgb(0_0_0_/_0.5)];
@@ -31,4 +33,24 @@
     .link-text:hover::after {
         @apply opacity-100;
     }
+}
+
+.simplebar-thin-white > .simplebar-track.simplebar-vertical > .simplebar-scrollbar {
+    @apply w-[8px] translate-x-[2.5px];
+}
+
+.simplebar-thin-white > .simplebar-track.simplebar-vertical > .simplebar-scrollbar::before {
+    @apply bg-white;
+}
+
+.simplebar-thin-white > .simplebar-track.simplebar-vertical > .simplebar-scrollbar.simplebar-visible::before {
+    @apply opacity-40 transition-opacity duration-32;
+}
+
+.simplebar-thin-white.simplebar-dragging > .simplebar-track.simplebar-vertical > .simplebar-scrollbar.simplebar-visible::before {
+    @apply opacity-60;
+}
+
+.simplebar-thin-white > .simplebar-track.simplebar-vertical.simplebar-hover > .simplebar-scrollbar.simplebar-visible.simplebar-hover::before {
+    @apply opacity-60;
 }
