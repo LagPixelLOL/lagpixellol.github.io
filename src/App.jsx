@@ -7,22 +7,33 @@ import PerlinNoise from "./components/PerlinNoise.jsx"
 import PSIconsOverlay from "./components/PSIconsOverlay.jsx"
 
 export default function App() {
+    const sidebarTextNudges = [2, 2, 0, 2, 2];
+
     return (
         <DottedGrid className="w-dvw h-dvh">
             <PSIconsOverlay/>
             <div className={`
-                flex flex-col justify-start items-center absolute z-69420 top-0 left-0 w-10 h-[50vh] ml-5
+                flex flex-col justify-start items-center absolute z-69420 top-0 left-0 w-[40px] h-[50vh] ml-[20px] pt-[8px] overflow-hidden
                 border rounded-b-full border-transparent outline outline-offset-2 outline-[rgba(255,_255,_255,_0.75)]
-                bg-[rgba(255,_255,_255,_0.5)] hover:bg-[rgba(255,_255,_255,_0.6)] transition-colors duration-50
+                bg-[rgba(255,_255,_255,_0.6)] hover:bg-[rgba(255,_255,_255,_0.7)] transition-colors duration-50
             `}>
+                {"V2RAY".split("").map((c, i) => (
+                    <div
+                        key={i}
+                        style={{transform: `translateX(${sidebarTextNudges[i]}px)`}}
+                        className="flex justify-center items-center h-[45px] font-pixel text-[70px] text-black [-webkit-text-stroke:0.7px_white] text-shadow-none select-none"
+                    >
+                        {c}
+                    </div>
+                ))}
                 <div className="flex mt-auto w-full justify-center items-center px-[3px] pb-[3.25px]">
                     <SineCircle color="#000000"/>
                 </div>
             </div>
             <SimpleBar autoHide={false} className="w-full h-full overflow-x-hidden simplebar-thin-white">
-                <div className="h-[300dvh]">
-                    <PerlinNoise color="#ffff00" className="mx-[25dvw] mt-[20dvh] w-[50dvw] h-[25dvh] border rounded-[50px]" forceMode="webgpu">aaaaaaaaaaaaaasdf webgpu</PerlinNoise>
-                    <PerlinNoise color="#00ffff" className="mx-[25dvw] mt-[3dvh] w-[50dvw] h-[25dvh] border rounded-[50px]" forceMode="webgl">aaaaaaaaaaaaaasdf webgl</PerlinNoise>
+                <div className="h-[300dvh] mx-[80px] mt-[40px]">
+                    <PerlinNoise color="#00ff00" x={42} y={42} className="mx-[25%] mt-[20vh] w-[50%] h-[25vh] border rounded-[50px]" forceMode="webgpu">aaaaaaaaaaaaaasdf webgpu</PerlinNoise>
+                    <PerlinNoise color="#00ffff" x={42} y={42} className="mx-[35%] mt-[3vh] w-[30%] h-[10vh] border rounded-[50px]" forceMode="webgl">aaaaaaaaaaaaaasdf webgl</PerlinNoise>
                 </div>
             </SimpleBar>
         </DottedGrid>

@@ -1,5 +1,5 @@
-import React, {forwardRef, useRef, useEffect, useCallback} from "react"
 import {twMerge} from "tailwind-merge"
+import React, {forwardRef, useRef, useEffect, useCallback} from "react"
 
 const BASE_SCALE = 8.0;
 

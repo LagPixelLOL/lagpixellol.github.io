@@ -1,5 +1,5 @@
-import React, {useRef, useEffect, useImperativeHandle, forwardRef, useState, useCallback} from "react"
 import {twMerge} from "tailwind-merge"
+import React, {useRef, useEffect, useImperativeHandle, forwardRef, useState, useCallback} from "react"
 
 const TYPE_POOL = ["square", "triangle", "cross", "circle"];
 const COLOR_POOL = [

@@ -2,6 +2,17 @@
 
 @import "simplebar-react/dist/simplebar.min.css";
 
+@font-face {
+    font-family: "HelvetiPixel";
+    src: url("./fonts/HelvetiPixel.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@theme {
+    --font-pixel: "HelvetiPixel", sans-serif;
+}
+
 @layer base {
     html {
         @apply bg-black text-white font-sans text-pretty text-shadow-[1.25px_1.25px_3px_rgb(0_0_0_/_0.5)];
