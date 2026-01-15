@@ -1,6 +1,8 @@
 import {useState, useId} from "react"
+import {twMerge} from "tailwind-merge"
 
 export default function SineCircle({
+    className,
     color = "#ffffff",
     size = 64,
     strokeWidthRatio = 0.05,
@@ -42,6 +44,7 @@ export default function SineCircle({
 
     return (
         <svg
+            className={twMerge("overflow-visible", className)}
             viewBox={`0 0 ${size} ${size}`}
             {...rest}
         >

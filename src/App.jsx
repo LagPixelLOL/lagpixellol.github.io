@@ -3,6 +3,7 @@ import {useState, useEffect} from "react"
 import boykisserImg from "./assets/boykisser.avif"
 import DottedGrid from "./components/DottedGrid.jsx"
 import SineCircle from "./components/SineCircle.jsx"
+import PerlinNoise from "./components/PerlinNoise.jsx"
 import PSIconsOverlay from "./components/PSIconsOverlay.jsx"
 
 export default function App() {
@@ -15,11 +16,14 @@ export default function App() {
                 bg-[rgba(255,_255,_255,_0.5)] hover:bg-[rgba(255,_255,_255,_0.6)] transition-colors duration-50
             `}>
                 <div className="flex mt-auto w-full justify-center items-center px-[3px] pb-[3.25px]">
-                    <SineCircle color="#000000" className="overflow-visible"/>
+                    <SineCircle color="#000000"/>
                 </div>
             </div>
             <SimpleBar autoHide={false} className="w-full h-full overflow-x-hidden simplebar-thin-white">
-                <div className="h-[300dvh]"></div>
+                <div className="h-[300dvh]">
+                    <PerlinNoise color="#ffff00" className="mx-[25dvw] mt-[20dvh] w-[50dvw] h-[25dvh] border rounded-[50px]" forceMode="webgpu">aaaaaaaaaaaaaasdf webgpu</PerlinNoise>
+                    <PerlinNoise color="#00ffff" className="mx-[25dvw] mt-[3dvh] w-[50dvw] h-[25dvh] border rounded-[50px]" forceMode="webgl">aaaaaaaaaaaaaasdf webgl</PerlinNoise>
+                </div>
             </SimpleBar>
         </DottedGrid>
     );
