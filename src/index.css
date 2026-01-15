@@ -35,22 +35,26 @@
     }
 }
 
-.simplebar-thin-white > .simplebar-track.simplebar-vertical > .simplebar-scrollbar {
-    @apply w-[8px] translate-x-[2.5px];
+.simplebar-thin-white > .simplebar-track.simplebar-horizontal {
+    @apply h-[7px];
 }
 
-.simplebar-thin-white > .simplebar-track.simplebar-vertical > .simplebar-scrollbar::before {
+.simplebar-thin-white > .simplebar-track.simplebar-vertical {
+    @apply w-[7px];
+}
+
+.simplebar-thin-white > .simplebar-track > .simplebar-scrollbar::before {
     @apply bg-white;
 }
 
-.simplebar-thin-white > .simplebar-track.simplebar-vertical > .simplebar-scrollbar.simplebar-visible::before {
+.simplebar-thin-white > .simplebar-track > .simplebar-scrollbar.simplebar-visible::before {
     @apply opacity-40 transition-opacity duration-32;
 }
 
-.simplebar-thin-white.simplebar-dragging > .simplebar-track.simplebar-vertical > .simplebar-scrollbar.simplebar-visible::before {
+.simplebar-thin-white.simplebar-dragging > .simplebar-track > .simplebar-scrollbar.simplebar-visible::before {
     @apply opacity-60;
 }
 
-.simplebar-thin-white > .simplebar-track.simplebar-vertical.simplebar-hover > .simplebar-scrollbar.simplebar-visible.simplebar-hover::before {
+.simplebar-thin-white > .simplebar-track.simplebar-hover > .simplebar-scrollbar.simplebar-visible.simplebar-hover::before {
     @apply opacity-60;
 }
