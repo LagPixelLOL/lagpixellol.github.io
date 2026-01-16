@@ -772,12 +772,12 @@ const PerlinNoise = forwardRef(function PerlinNoise({
     return (
         <div
             ref={setRef}
-            className={twMerge("relative overflow-hidden", className)}
+            className={twMerge("relative overflow-hidden z-0", className)}
             {...props}
         >
             <canvas
                 ref={canvasRef}
-                className="absolute inset-0 w-full h-full pointer-events-none -z-69420"
+                className="absolute inset-0 pointer-events-none -z-69420"
                 style={{background: "transparent"}}
             />
             {children}

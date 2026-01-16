@@ -3,14 +3,25 @@
 @import "simplebar-react/dist/simplebar.min.css";
 
 @font-face {
-    font-family: "HelvetiPixel";
-    src: url("./fonts/HelvetiPixel.ttf") format("truetype");
+    font-family: "FusionPixel Latin S";
+    src: url("./fonts/fusion-pixel-8px-proportional-latin.otf.woff2");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "FusionPixel HanT L";
+    src: url("./fonts/fusion-pixel-12px-proportional-zh_hant.otf.woff2");
     font-weight: 400;
     font-style: normal;
 }
 
 @theme {
-    --font-pixel: "HelvetiPixel", sans-serif;
+    --font-pixel-s: "FusionPixel Latin S", sans-serif;
+}
+
+@theme {
+    --font-pixel-l: "FusionPixel HanT L", sans-serif;
 }
 
 @layer base {

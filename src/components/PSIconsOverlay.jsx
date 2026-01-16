@@ -352,7 +352,7 @@ const PSIconsOverlay = forwardRef(function PSIconsOverlay(
     return (
         <div
             ref={containerRef}
-            className={twMerge("absolute inset-0 overflow-hidden pointer-events-none", className)}
+            className={twMerge("absolute inset-0 overflow-hidden pointer-events-none -z-69420", className)}
             {...props}>
             <svg width="0" height="0" style={{position: "absolute"}}>
                 <defs>

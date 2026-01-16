@@ -9,13 +9,12 @@ import PSIconsOverlay from "./components/PSIconsOverlay.jsx"
 export default function App() {
     const [isHoveredList, setIsHoveredList] = useState(Array(5).fill(false));
     const sidebarHoverColors = ["#6366f1", "#14b8a6", "#f59e0b", "#ef4444", "#84cc16"];
-    const sidebarTextNudges = [2, 2, 0, 2, 2];
 
     return (
         <DottedGrid className="w-dvw h-dvh">
             <PSIconsOverlay/>
             <div className={`
-                flex flex-col justify-start items-center absolute z-69420 top-0 left-0 w-[40px] h-[50vh] ml-[20px] pt-[8px] overflow-hidden
+                flex flex-col justify-start items-center absolute z-69420 top-0 left-0 w-[40px] h-[50vh] ml-[20px] pt-[8px]
                 border rounded-b-full border-transparent outline outline-offset-2 outline-[rgba(255,_255,_255,_0.75)]
                 bg-[rgba(255,_255,_255,_0.6)] hover:bg-[rgba(255,_255,_255,_0.7)] transition-colors duration-50
             `}>
@@ -27,10 +26,7 @@ export default function App() {
                         onMouseEnter={() => setIsHoveredList(prev => prev.map((isHovered, index) => index === i ? true : isHovered))}
                         onMouseLeave={() => setIsHoveredList(prev => prev.map((isHovered, index) => index === i ? false : isHovered))}
                     >
-                        <div
-                            style={{transform: `translateX(${sidebarTextNudges[i]}px)`}}
-                            className="flex justify-center items-center h-[45px] font-pixel text-[70px] [-webkit-text-stroke:0.7px_white] text-shadow-none select-none pointer-events-none"
-                        >
+                        <div className="flex justify-center items-center h-[45px] font-pixel-s text-[50px] [-webkit-text-stroke:0.7px_white] text-shadow-none select-none pointer-events-none translate-x-[3px]">
                             {c}
                         </div>
                     </div>
@@ -41,6 +37,7 @@ export default function App() {
             </div>
             <SimpleBar autoHide={false} className="w-full h-full overflow-x-hidden simplebar-thin-white">
                 <div className="h-[300dvh] mx-[80px] mt-[40px]">
+                    <p className="text-[300px] font-pixel-l text-transparent [-webkit-text-stroke:1rem_white] text-shadow-none">缝合像素字体</p>
                     <PerlinNoise color="#00ff00" x={42} y={42} className="mx-[25%] mt-[20vh] w-[50%] h-[25vh] border rounded-[50px]" forceMode="webgpu">aaaaaaaaaaaaaasdf webgpu</PerlinNoise>
                     <PerlinNoise color="#00ffff" x={42} y={42} className="mx-[35%] mt-[3vh] w-[30%] h-[10vh] border rounded-[50px]" forceMode="webgl">aaaaaaaaaaaaaasdf webgl</PerlinNoise>
                 </div>

@@ -12,12 +12,12 @@ const DottedGrid = forwardRef(({className, children, style, ...props}, ref) => {
     return (
         <div
             ref={ref}
-            className={twMerge("relative bg-zinc-950", className)}
+            className={twMerge("relative z-0 bg-zinc-950", className)}
             style={style}
             {...props}
         >
             <div 
-                className="absolute inset-0 pointer-events-none"
+                className="absolute inset-0 pointer-events-none -z-6942069"
                 style={dotPattern}
                 aria-hidden="true"
             />
