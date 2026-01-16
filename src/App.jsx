@@ -1,5 +1,5 @@
+import {useState} from "react"
 import SimpleBar from "simplebar-react"
-import {useState, useEffect} from "react"
 import boykisserImg from "./assets/boykisser.avif"
 import DottedGrid from "./components/DottedGrid.jsx"
 import SineCircle from "./components/SineCircle.jsx"
@@ -7,6 +7,8 @@ import PerlinNoise from "./components/PerlinNoise.jsx"
 import PSIconsOverlay from "./components/PSIconsOverlay.jsx"
 
 export default function App() {
+    const [isHoveredList, setIsHoveredList] = useState(Array(5).fill(false));
+    const sidebarHoverColors = ["#6366f1", "#14b8a6", "#f59e0b", "#ef4444", "#84cc16"];
     const sidebarTextNudges = [2, 2, 0, 2, 2];
 
     return (
@@ -20,10 +22,17 @@ export default function App() {
                 {"V2RAY".split("").map((c, i) => (
                     <div
                         key={i}
-                        style={{transform: `translateX(${sidebarTextNudges[i]}px)`}}
-                        className="flex justify-center items-center h-[45px] font-pixel text-[70px] text-black [-webkit-text-stroke:0.7px_white] text-shadow-none select-none"
+                        style={{color: isHoveredList[i] ? sidebarHoverColors[i] : "black"}}
+                        className="flex justify-center items-center w-full duration-50"
+                        onMouseEnter={() => setIsHoveredList(prev => prev.map((isHovered, index) => index === i ? true : isHovered))}
+                        onMouseLeave={() => setIsHoveredList(prev => prev.map((isHovered, index) => index === i ? false : isHovered))}
                     >
-                        {c}
+                        <div
+                            style={{transform: `translateX(${sidebarTextNudges[i]}px)`}}
+                            className="flex justify-center items-center h-[45px] font-pixel text-[70px] [-webkit-text-stroke:0.7px_white] text-shadow-none select-none pointer-events-none"
+                        >
+                            {c}
+                        </div>
                     </div>
                 ))}
                 <div className="flex mt-auto w-full justify-center items-center px-[3px] pb-[3.25px]">
