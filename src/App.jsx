@@ -4,12 +4,13 @@ import boykisserImg from "./assets/boykisser.avif"
 import DottedGrid from "./components/DottedGrid.jsx"
 import SineCircle from "./components/SineCircle.jsx"
 import PerlinNoise from "./components/PerlinNoise.jsx"
+import BigCharacter from "./components/BigCharacter.jsx"
 import PSIconsOverlay from "./components/PSIconsOverlay.jsx"
 
 export default function App() {
     const [isHoveredList, setIsHoveredList] = useState(Array(5).fill(false));
     const [gridMarginTop, setGridMarginTop] = useState(0);
-    const sidebarHoverColors = ["#6366f1", "#14b8a6", "#f59e0b", "#ef4444", "#84cc16"];
+    const sidebarHoveredColors = ["#6366f1", "#14b8a6", "#f59e0b", "#ef4444", "#84cc16"];
 
     const simpleBarRef = useRef(null);
     const gridRef = useRef(null);
@@ -42,8 +43,6 @@ export default function App() {
         return () => resizeObserver.disconnect();
     }, []);
 
-    const bigPixelatedHanZiWrapperStyle = "flex justify-center items-center overflow-hidden @container";
-    const bigPixelatedHanZiStyle = "text-[85cqw] [-webkit-text-stroke:3cqw_rgba(248,_248,_248)] font-pixel-l text-transparent text-shadow-none translate-x-[3.5cqw] -translate-y-[4cqw]";
     const textWrapperStyle = "flex items-center bg-white/8 backdrop-blur-[5px] px-[3cqw] py-[2cqw] outline outline-offset-3 outline-white/50 rounded-[8cqw]";
     const textStyle = "text-[4.5cqw]";
 
@@ -53,12 +52,12 @@ export default function App() {
             <div className={`
                 flex flex-col justify-start items-center absolute z-69420 top-0 left-0 w-[40px] h-[50vh] ml-[20px] pt-[8px]
                 border rounded-b-full border-transparent outline outline-offset-2 outline-white/75
-                bg-white/70
+                bg-white/16 backdrop-blur-[5px]
             `}>
                 {"V2RAY".split("").map((c, i) => (
                     <div
                         key={i}
-                        style={{color: isHoveredList[i] ? sidebarHoverColors[i] : "black"}}
+                        style={{color: isHoveredList[i] ? sidebarHoveredColors[i] : "transparent"}}
                         className="flex justify-center items-center w-full transition-colors duration-50"
                         onMouseEnter={() => setIsHoveredList(prev => prev.map((isHovered, index) => index === i ? true : isHovered))}
                         onMouseLeave={() => setIsHoveredList(prev => prev.map((isHovered, index) => index === i ? false : isHovered))}
@@ -69,7 +68,7 @@ export default function App() {
                     </div>
                 ))}
                 <div className="flex mt-auto w-full justify-center items-center px-[3px] pb-[3.25px]">
-                    <SineCircle color="#000000"/>
+                    <SineCircle color="#eaeaea"/>
                 </div>
             </div>
             <SimpleBar ref={simpleBarRef} autoHide={false} className="w-full h-full overflow-x-hidden simplebar-thin-white @container">
@@ -82,12 +81,8 @@ export default function App() {
                         <div className={textWrapperStyle}>
                             <p className={textStyle}>My username is typically v2ray, also known as LagPixelLOL.</p>
                         </div>
-                        <div className={bigPixelatedHanZiWrapperStyle}>
-                            <p className={bigPixelatedHanZiStyle}>魏</p>
-                        </div>
-                        <div className={bigPixelatedHanZiWrapperStyle}>
-                            <p className={bigPixelatedHanZiStyle}>爾</p>
-                        </div>
+                        <BigCharacter bgImageStyle={`linear-gradient(in oklab, ${sidebarHoveredColors[1]}, ${sidebarHoveredColors[2]})`}>魏</BigCharacter>
+                        <BigCharacter bgImageStyle={`linear-gradient(in oklab, ${sidebarHoveredColors[2]}, ${sidebarHoveredColors[0]})`}>爾</BigCharacter>
                         <div className={textWrapperStyle}>
                             <p className={textStyle}>
                                 GitHub: <a href="https://github.com/LagPixelLOL" target="_blank"><span className="link-text">LagPixelLOL</span></a><br/><br/>
@@ -98,9 +93,7 @@ export default function App() {
                         <div className={textWrapperStyle}>
                             <p className={textStyle}>Lead of Project Looking Glass, operator of Straylight, searching for Rainbows in Starlights.</p>
                         </div>
-                        <div className={bigPixelatedHanZiWrapperStyle}>
-                            <p className={bigPixelatedHanZiStyle}>睿</p>
-                        </div>
+                        <BigCharacter bgImageStyle={`linear-gradient(in oklab, ${sidebarHoveredColors[0]}, ${sidebarHoveredColors[4]})`}>睿</BigCharacter>
                     </div>
                     <div className="flex justify-center items-center h-[100px] mt-[75px] mb-[50px]"><PerlinNoise x={42} y={42} color="#f8f8f8" className="w-full max-w-[100cqh] h-full backdrop-blur-[5px] outline outline-offset-3 outline-white/50 rounded-full"></PerlinNoise></div>
                     <footer className="text-center mt-auto py-2.5 font-mono">Made with GEX && React && Tailwind</footer>
