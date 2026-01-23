@@ -1,10 +1,10 @@
 import SimpleBar from "simplebar-react"
 import {useState, useRef, useEffect} from "react"
-import boykisserImg from "./assets/boykisser.avif"
 import DottedGrid from "./components/DottedGrid.jsx"
 import SineCircle from "./components/SineCircle.jsx"
 import PerlinNoise from "./components/PerlinNoise.jsx"
 import BigCharacter from "./components/BigCharacter.jsx"
+import foxboyRainbowImg from "./assets/foxboy_rainbow.avif"
 import PSIconsOverlay from "./components/PSIconsOverlay.jsx"
 
 export default function App() {
@@ -95,8 +95,16 @@ export default function App() {
                         </div>
                         <BigCharacter bgImageStyle={`linear-gradient(in oklab, ${sidebarHoveredColors[0]}, ${sidebarHoveredColors[4]})`}>睿</BigCharacter>
                     </div>
-                    <div className="flex justify-center items-center h-[100px] mt-[75px] mb-[50px]"><PerlinNoise x={42} y={42} color="#f8f8f8" className="w-full max-w-[100cqh] h-full backdrop-blur-[5px] outline outline-offset-3 outline-white/50 rounded-full"></PerlinNoise></div>
-                    <footer className="text-center mt-auto py-2.5 font-mono">Made with GEX && React && Tailwind</footer>
+                    <div className="flex justify-center items-center h-[100px] mt-[70px]">
+                        <PerlinNoise x={42} y={42} color="#f8f8f8" className="w-full max-w-[100cqh] h-full backdrop-blur-[5px] outline outline-offset-3 outline-white/50 rounded-full"/>
+                    </div>
+                    <div className="flex justify-center items-center h-[400px] mt-[70px]">
+                        <img className="w-full max-w-[133cqh] h-full object-cover outline outline-offset-3 outline-white/50 rounded-[100px]" src={foxboyRainbowImg}/>
+                    </div>
+                    <div className="flex justify-center items-center h-[100px] mt-[70px]">
+                        <PerlinNoise x={23} y={34} color="#f8f8f8" className="w-full max-w-[100cqh] h-full backdrop-blur-[5px] outline outline-offset-3 outline-white/50 rounded-full"/>
+                    </div>
+                    <footer className="text-center mt-auto pt-[50px] pb-[10px] font-mono">Made with GEX && React && Tailwind</footer>
                 </div>
             </SimpleBar>
         </DottedGrid>
