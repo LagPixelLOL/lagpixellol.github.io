@@ -47,6 +47,10 @@
         @apply text-indigo-400;
     }
 
+    .link-text::selection {
+        @apply underline;
+    }
+
     .link-text::after {
         content: "";
         @apply absolute left-0 right-0 bottom-0 bg-lime-500 h-[2px] opacity-0 transition-opacity -z-1;

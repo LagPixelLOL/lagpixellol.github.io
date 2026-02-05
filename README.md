@@ -1,3 +1,3 @@
-# Front Page
-My unslop front page, basically a stolen yura's layout. \
+# Portfolio
+My semi-slop portfolio, this time designed by myself! :3 \
 [Click me to visit!](https://boikisser.com)

@@ -87,7 +87,7 @@ export default function App() {
                             <p className={textStyle}>
                                 GitHub: <a href="https://github.com/LagPixelLOL" target="_blank"><span className="link-text">LagPixelLOL</span></a><br/><br/>
                                 HuggingFace: <a href="https://huggingface.co/v2ray" target="_blank"><span className="link-text">v2ray</span></a><br/><br/>
-                                Discord: <a href="https://discord.gg/r4Wj97nZ" target="_blank"><span className="link-text">@v2ray</span></a>
+                                Discord: <span className="link-text">@v2rayn</span>
                             </p>
                         </div>
                         <div className={textWrapperStyle}>
@@ -96,13 +96,13 @@ export default function App() {
                         <BigCharacter bgImageStyle={`linear-gradient(in oklab, ${sidebarHoveredColors[0]}, ${sidebarHoveredColors[4]})`}>睿</BigCharacter>
                     </div>
                     <div className="flex justify-center items-center h-[100px] mt-[70px]">
-                        <PerlinNoise x={42} y={42} color="#f8f8f8" className="w-full max-w-[100cqh] h-full backdrop-blur-[5px] outline outline-offset-3 outline-white/50 rounded-full"/>
+                        <PerlinNoise scale={1.5} x={42} y={42} color="#f8f8f8" className="w-full max-w-[100cqh] h-full backdrop-blur-[5px] outline outline-offset-3 outline-white/50 rounded-full"/>
                     </div>
                     <div className="flex justify-center items-center h-[400px] mt-[70px]">
                         <img className="w-full max-w-[133cqh] h-full object-cover outline outline-offset-3 outline-white/50 rounded-[100px]" src={foxboyRainbowImg}/>
                     </div>
                     <div className="flex justify-center items-center h-[100px] mt-[70px]">
-                        <PerlinNoise x={23} y={34} color="#f8f8f8" className="w-full max-w-[100cqh] h-full backdrop-blur-[5px] outline outline-offset-3 outline-white/50 rounded-full"/>
+                        <PerlinNoise scale={1.5} x={23} y={34} color="#f8f8f8" className="w-full max-w-[100cqh] h-full backdrop-blur-[5px] outline outline-offset-3 outline-white/50 rounded-full"/>
                     </div>
                     <footer className="text-center mt-auto pt-[50px] pb-[10px] font-mono">Made with GEX && React && Tailwind</footer>
                 </div>

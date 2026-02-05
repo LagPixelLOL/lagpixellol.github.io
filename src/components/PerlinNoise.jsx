@@ -777,7 +777,7 @@ const PerlinNoise = forwardRef(function PerlinNoise({
         >
             <canvas
                 ref={canvasRef}
-                className="absolute inset-0 pointer-events-none -z-69420"
+                className="absolute w-full h-full pointer-events-none -z-69420"
                 style={{background: "transparent"}}
             />
             {children}
