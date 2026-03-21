@@ -1,10 +1,11 @@
+import {twMerge} from "tailwind-merge"
 import SimpleBar from "simplebar-react"
 import {useState, useRef, useEffect} from "react"
 import DottedGrid from "./components/DottedGrid.jsx"
 import SineCircle from "./components/SineCircle.jsx"
 import PerlinNoise from "./components/PerlinNoise.jsx"
 import BigCharacter from "./components/BigCharacter.jsx"
-import foxboyRainbowImg from "./assets/foxboy_rainbow.avif"
+import foxboyRainbowImg from "./assets/images/foxboy_rainbow.avif"
 import PSIconsOverlay from "./components/PSIconsOverlay.jsx"
 
 export default function App() {
@@ -45,6 +46,13 @@ export default function App() {
 
     const textWrapperStyle = "flex items-center bg-white/8 backdrop-blur-[5px] px-[3cqw] py-[2cqw] outline outline-offset-3 outline-white/50 rounded-[8cqw]";
     const textStyle = "text-[4.5cqw]";
+
+    const blockWrapperCommonStyle = "flex justify-center items-center mt-[70px]";
+    const blockCommonProps = {
+        scale: 1.5,
+        color: "#f8f8f8",
+        className: "w-full max-w-[100cqh] h-full backdrop-blur-[5px] outline outline-offset-3 outline-white/50 rounded-full",
+    };
 
     return (
         <DottedGrid className="w-dvw h-dvh">
@@ -95,14 +103,14 @@ export default function App() {
                         </div>
                         <BigCharacter bgImageStyle={`linear-gradient(in oklab, ${sidebarHoveredColors[0]}, ${sidebarHoveredColors[4]})`}>睿</BigCharacter>
                     </div>
-                    <div className="flex justify-center items-center h-[100px] mt-[70px]">
-                        <PerlinNoise scale={1.5} x={42} y={42} color="#f8f8f8" className="w-full max-w-[100cqh] h-full backdrop-blur-[5px] outline outline-offset-3 outline-white/50 rounded-full"/>
+                    <div className={twMerge(blockWrapperCommonStyle, "h-[100px]")}>
+                        <PerlinNoise x={42} y={42} {...blockCommonProps}/>
                     </div>
-                    <div className="flex justify-center items-center h-[400px] mt-[70px]">
+                    <div className={twMerge(blockWrapperCommonStyle, "h-[400px]")}>
                         <img className="w-full max-w-[133cqh] h-full object-cover outline outline-offset-3 outline-white/50 rounded-[100px]" src={foxboyRainbowImg}/>
                     </div>
-                    <div className="flex justify-center items-center h-[100px] mt-[70px]">
-                        <PerlinNoise scale={1.5} x={23} y={34} color="#f8f8f8" className="w-full max-w-[100cqh] h-full backdrop-blur-[5px] outline outline-offset-3 outline-white/50 rounded-full"/>
+                    <div className={twMerge(blockWrapperCommonStyle, "h-[100px]")}>
+                        <PerlinNoise x={23} y={34} {...blockCommonProps}/>
                     </div>
                     <footer className="text-center mt-auto pt-[50px] pb-[10px] font-mono">Made with GEX && React && Tailwind</footer>
                 </div>

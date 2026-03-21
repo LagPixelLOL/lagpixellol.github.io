@@ -16,6 +16,13 @@ const parseHexColor = (hex) => {
     ];
 };
 
+const normalizeCASamples = (value) => {
+    let samples = Math.round(value);
+    samples = Math.max(2, samples);
+    if (samples % 2 !== 0) samples = samples + 1;
+    return samples;
+};
+
 const PerlinNoise = forwardRef(function PerlinNoise({
     className,
     children,
@@ -24,6 +31,11 @@ const PerlinNoise = forwardRef(function PerlinNoise({
     scale = 1,
     x = 0,
     y = 0,
+    caContrast = 1,
+    caSamples = 32,
+    caSpread = 0.025,
+    caCenterX = 0.5,
+    caCenterY = 0.5,
     forceMode = null,
     ...props
 }, forwardedRef) {
@@ -34,6 +46,11 @@ const PerlinNoise = forwardRef(function PerlinNoise({
     const scaleRef = useRef(scale);
     const xRef = useRef(x);
     const yRef = useRef(y);
+    const caContrastRef = useRef(caContrast);
+    const caSamplesRef = useRef(caSamples);
+    const caSpreadRef = useRef(caSpread);
+    const caCenterXRef = useRef(caCenterX);
+    const caCenterYRef = useRef(caCenterY);
     const forceModeRef = useRef(forceMode);
 
     useEffect(() => {
@@ -55,6 +72,26 @@ const PerlinNoise = forwardRef(function PerlinNoise({
     useEffect(() => {
         yRef.current = y;
     }, [y]);
+
+    useEffect(() => {
+        caContrastRef.current = caContrast;
+    }, [caContrast]);
+
+    useEffect(() => {
+        caSamplesRef.current = caSamples;
+    }, [caSamples]);
+
+    useEffect(() => {
+        caSpreadRef.current = caSpread;
+    }, [caSpread]);
+
+    useEffect(() => {
+        caCenterXRef.current = caCenterX;
+    }, [caCenterX]);
+
+    useEffect(() => {
+        caCenterYRef.current = caCenterY;
+    }, [caCenterY]);
 
     useEffect(() => {
         forceModeRef.current = forceMode;
@@ -105,6 +142,16 @@ const PerlinNoise = forwardRef(function PerlinNoise({
             };
         };
 
+        const getCAParams = () => {
+            return {
+                contrast: caContrastRef.current,
+                samples: normalizeCASamples(caSamplesRef.current),
+                spread: caSpreadRef.current,
+                centerX: caCenterXRef.current,
+                centerY: caCenterYRef.current,
+            };
+        };
+
         const startWebGPU = async () => {
             const adapter = await navigator.gpu.requestAdapter();
             if (!adapter) throw new Error("No GPU adapter found");
@@ -116,7 +163,7 @@ const PerlinNoise = forwardRef(function PerlinNoise({
             const format = navigator.gpu.getPreferredCanvasFormat();
 
             const uniformBuffer = device.createBuffer({
-                size: 48,
+                size: 64,
                 usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
             });
 
@@ -124,7 +171,8 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                 struct Uniforms {
                     params0 : vec4<f32>,
                     params1 : vec4<f32>,
-                    color : vec4<f32>,
+                    params2 : vec4<f32>,
+                    params3 : vec4<f32>,
                 };
                 @group(0) @binding(0) var<uniform> U : Uniforms;
 
@@ -132,8 +180,12 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                     return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
                 }
 
-                fn lerp(a: f32, b: f32, t: f32) -> f32 {
+                fn lerp1(a: f32, b: f32, t: f32) -> f32 {
                     return a + t * (b - a);
+                }
+
+                fn fadePrime(t: f32) -> f32 {
+                    return 30.0 * t * t * (t - 1.0) * (t - 1.0);
                 }
 
                 fn hash3(p: vec3<i32>) -> u32 {
@@ -181,14 +233,14 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                     let g011 = grad3(hash3(pi + vec3<i32>(0,1,1)));
                     let g111 = grad3(hash3(pi + vec3<i32>(1,1,1)));
 
-                    let d000 = pf - vec3<f32>(0.0,0.0,0.0);
-                    let d100 = pf - vec3<f32>(1.0,0.0,0.0);
-                    let d010 = pf - vec3<f32>(0.0,1.0,0.0);
-                    let d110 = pf - vec3<f32>(1.0,1.0,0.0);
-                    let d001 = pf - vec3<f32>(0.0,0.0,1.0);
-                    let d101 = pf - vec3<f32>(1.0,0.0,1.0);
-                    let d011 = pf - vec3<f32>(0.0,1.0,1.0);
-                    let d111 = pf - vec3<f32>(1.0,1.0,1.0);
+                    let d000 = pf - vec3<f32>(0.0, 0.0, 0.0);
+                    let d100 = pf - vec3<f32>(1.0, 0.0, 0.0);
+                    let d010 = pf - vec3<f32>(0.0, 1.0, 0.0);
+                    let d110 = pf - vec3<f32>(1.0, 1.0, 0.0);
+                    let d001 = pf - vec3<f32>(0.0, 0.0, 1.0);
+                    let d101 = pf - vec3<f32>(1.0, 0.0, 1.0);
+                    let d011 = pf - vec3<f32>(0.0, 1.0, 1.0);
+                    let d111 = pf - vec3<f32>(1.0, 1.0, 1.0);
 
                     let n000 = dot(g000, d000);
                     let n100 = dot(g100, d100);
@@ -199,18 +251,93 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                     let n011 = dot(g011, d011);
                     let n111 = dot(g111, d111);
 
-                    let nx00 = lerp(n000, n100, u);
-                    let nx10 = lerp(n010, n110, u);
-                    let nx01 = lerp(n001, n101, u);
-                    let nx11 = lerp(n011, n111, u);
+                    let nx00 = lerp1(n000, n100, u);
+                    let nx10 = lerp1(n010, n110, u);
+                    let nx01 = lerp1(n001, n101, u);
+                    let nx11 = lerp1(n011, n111, u);
 
-                    let nxy0 = lerp(nx00, nx10, v);
-                    let nxy1 = lerp(nx01, nx11, v);
+                    let nxy0 = lerp1(nx00, nx10, v);
+                    let nxy1 = lerp1(nx01, nx11, v);
 
-                    let nxyz = lerp(nxy0, nxy1, w);
+                    let nxyz = lerp1(nxy0, nxy1, w);
 
                     let scaled = nxyz * 1.2;
                     return clamp(scaled, -1.0, 1.0);
+                }
+
+                fn perlinAlphaAtUV(uv: vec2<f32>) -> f32 {
+                    let width = U.params0.x;
+                    let height = U.params0.y;
+                    let time = U.params0.z;
+                    let scale = U.params0.w;
+
+                    let speedZ = U.params1.x;
+                    let offsetX = U.params1.z;
+                    let offsetY = U.params1.w;
+
+                    let minDim = min(width, height);
+                    let fragXY = uv * vec2<f32>(width, height);
+                    let xy = (fragXY - 0.5 * vec2<f32>(width, height)) / minDim + vec2<f32>(offsetX, offsetY);
+
+                    let phase = perlin3(vec3<f32>(xy * (scale * 0.15) + vec2<f32>(5.2, -3.7), 0.0));
+                    let z = time * speedZ + phase * 3.5;
+                    let p = vec3<f32>(xy * scale + vec2<f32>(17.3, -9.1), z);
+
+                    let eps = 0.02;
+                    let nPlus = perlin3(p + vec3<f32>(0.0, 0.0, eps));
+                    let nMinus = perlin3(p - vec3<f32>(0.0, 0.0, eps));
+                    let dndz = (nPlus - nMinus) / (2.0 * eps);
+
+                    let env = max(fadePrime(fract(p.z)), 1e-3);
+                    return clamp(abs(dndz) / env * 0.1, 0.0, 1.0);
+                }
+
+                fn chromaticPerlin(uv: vec2<f32>) -> vec4<f32> {
+                    let caContrast = U.params2.x;
+                    let caSamplesF = U.params2.y;
+                    let caSpread = U.params2.z;
+                    let caCenter = vec2<f32>(U.params2.w, U.params3.x);
+
+                    let sampleCount = max(2, i32(floor(caSamplesF + 0.5)));
+                    let denom = max(f32(sampleCount - 1), 1.0);
+
+                    var colorSum = vec3<f32>(0.0, 0.0, 0.0);
+                    var weightSum = vec3<f32>(0.0, 0.0, 0.0);
+                    var alphaSum = 0.0;
+                    var alphaWeightSum = 0.0;
+
+                    for (var si: i32 = 0; si < sampleCount; si = si + 1) {
+                        let i = f32(si) / denom;
+                        let offset = (i - 0.5) * caSpread;
+                        let coord = clamp(
+                            uv + (caCenter - uv) * offset,
+                            vec2<f32>(0.0, 0.0),
+                            vec2<f32>(1.0, 1.0)
+                        );
+
+                        let a = perlinAlphaAtUV(coord);
+
+                        var weight = vec4<f32>(i, 1.0 - abs(i + i - 1.0), 1.0 - i, 0.5);
+                        weight = vec4<f32>(0.5, 0.5, 0.5, 0.5) + (weight - vec4<f32>(0.5, 0.5, 0.5, 0.5)) * caContrast;
+
+                        colorSum += vec3<f32>(a * a, a * a, a * a) * weight.rgb;
+                        weightSum += weight.rgb;
+                        alphaSum += a * a * weight.a;
+                        alphaWeightSum += weight.a;
+                    }
+
+                    let colorAvg = clamp(
+                        colorSum / max(weightSum, vec3<f32>(1e-4, 1e-4, 1e-4)),
+                        vec3<f32>(0.0, 0.0, 0.0),
+                        vec3<f32>(1.0, 1.0, 1.0)
+                    );
+                    let alphaAvg = clamp(alphaSum / max(alphaWeightSum, 1e-4), 0.0, 1.0);
+
+                    let color = sqrt(colorAvg);
+                    let alpha = sqrt(alphaAvg);
+                    let premul = min(color, vec3<f32>(alpha, alpha, alpha));
+
+                    return vec4<f32>(premul, alpha);
                 }
 
                 struct VSOut {
@@ -229,42 +356,20 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                     return out;
                 }
 
-                fn fadePrime(t: f32) -> f32 {
-                    return 30.0 * t * t * (t - 1.0) * (t - 1.0);
-                }
-
                 @fragment
                 fn fsMain(@builtin(position) fragPos: vec4<f32>) -> @location(0) vec4<f32> {
                     let width = U.params0.x;
                     let height = U.params0.y;
-                    let time = U.params0.z;
-                    let scale = U.params0.w;
-
-                    let speedZ = U.params1.x;
                     let opacity = U.params1.y;
-                    let offsetX = U.params1.z;
-                    let offsetY = U.params1.w;
-                    let baseColor = U.color.rgb;
+                    let baseColor = U.params3.yzw;
 
-                    let minDim = min(width, height);
-                    let xy = (fragPos.xy - 0.5 * vec2<f32>(width, height)) / minDim + vec2<f32>(offsetX, offsetY);
+                    let uv = fragPos.xy / vec2<f32>(width, height);
+                    let chroma = chromaticPerlin(uv);
 
-                    let phase = perlin3(vec3<f32>(xy * (scale * 0.15) + vec2<f32>(5.2, -3.7), 0.0));
-                    let z = time * speedZ + phase * 3.5;
-                    let p = vec3<f32>(xy * scale + vec2<f32>(17.3, -9.1), z);
+                    let finalAlpha = chroma.a * opacity;
+                    let finalRgb = chroma.rgb * baseColor * opacity;
 
-                    let n = perlin3(p);
-
-                    let eps = 0.02;
-                    let nPlus  = perlin3(p + vec3<f32>(0.0, 0.0, eps));
-                    let nMinus = perlin3(p - vec3<f32>(0.0, 0.0, eps));
-                    let dndz = (nPlus - nMinus) / (2.0 * eps);
-
-                    let env = max(fadePrime(fract(p.z)), 1e-3);
-                    let alpha = clamp(abs(dndz) / env * 0.1, 0.0, 1.0);
-
-                    let finalAlpha = alpha * opacity;
-                    return vec4<f32>(baseColor * finalAlpha, finalAlpha);
+                    return vec4<f32>(finalRgb, finalAlpha);
                 }
             `;
 
@@ -317,10 +422,16 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                 const finalScale = BASE_SCALE / userScale;
                 const adjustedX = xRef.current * userScale;
                 const adjustedY = yRef.current * userScale;
+                const ca = getCAParams();
 
                 device.queue.writeBuffer(
                     uniformBuffer, 0,
-                    new Float32Array([w, h, t, finalScale, speedZ, opacityRef.current, adjustedX, adjustedY, r, g, b, 0])
+                    new Float32Array([
+                        w, h, t, finalScale,
+                        speedZ, opacityRef.current, adjustedX, adjustedY,
+                        ca.contrast, ca.samples, ca.spread, ca.centerX,
+                        ca.centerY, r, g, b
+                    ])
                 );
 
                 const encoder = device.createCommandEncoder();
@@ -347,21 +458,13 @@ const PerlinNoise = forwardRef(function PerlinNoise({
         };
 
         const startWebGL = async () => {
-            let gl = canvas.getContext("webgl2", {
+            const gl = canvas.getContext("webgl2", {
                 antialias: false,
                 alpha: true,
                 premultipliedAlpha: true,
             });
-            let isWebGL2 = !!gl;
             if (!gl) {
-                gl = canvas.getContext("webgl", {
-                    antialias: false,
-                    alpha: true,
-                    premultipliedAlpha: true,
-                });
-            }
-            if (!gl) {
-                console.error("Neither WebGPU nor WebGL is supported in this browser.");
+                console.error("WebGL2 is not supported in this browser.");
                 return;
             }
 
@@ -406,7 +509,7 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                 return prog;
             };
 
-            const vs300 = `#version 300 es
+            const vsSrc = `#version 300 es
                 precision highp float;
                 const vec2 P[3] = vec2[3](
                     vec2(-1.0, -1.0),
@@ -418,7 +521,7 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                 }
             `;
 
-            const fs300 = `#version 300 es
+            const fsSrc = `#version 300 es
                 precision highp float;
                 precision highp int;
 
@@ -430,6 +533,11 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                 uniform float u_opacity;
                 uniform vec2 u_offset;
 
+                uniform float u_caContrast;
+                uniform float u_caSamples;
+                uniform float u_caSpread;
+                uniform vec2 u_caCenter;
+
                 out vec4 outColor;
 
                 float fade(float t){
@@ -438,6 +546,10 @@ const PerlinNoise = forwardRef(function PerlinNoise({
 
                 float lerp1(float a, float b, float t){
                     return a + t * (b - a);
+                }
+
+                float fadePrime(float t){
+                    return 30.0 * t * t * (t - 1.0) * (t - 1.0);
                 }
 
                 uint hash3(ivec3 p){
@@ -504,22 +616,17 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                     return clamp(scaled, -1.0, 1.0);
                 }
 
-                float fadePrime(float t){
-                    return 30.0 * t * t * (t - 1.0) * (t - 1.0);
-                }
-
-                void main(){
+                float perlinAlphaAtUV(vec2 uv){
                     float width = u_resolution.x;
                     float height = u_resolution.y;
 
                     float minDim = min(width, height);
-                    vec2 xy = (vec2(gl_FragCoord.x, height - gl_FragCoord.y) - 0.5 * vec2(width, height)) / minDim + u_offset;
+                    vec2 fragXY = uv * vec2(width, height);
+                    vec2 xy = (fragXY - 0.5 * vec2(width, height)) / minDim + u_offset;
 
                     float phase = perlin3(vec3(xy * (u_scale * 0.15) + vec2(5.2, -3.7), 0.0));
                     float z = u_time * u_speedZ + phase * 3.5;
                     vec3 p = vec3(xy * u_scale + vec2(17.3, -9.1), z);
-
-                    float n = perlin3(p);
 
                     float eps = 0.02;
                     float nPlus  = perlin3(p + vec3(0.0, 0.0, eps));
@@ -527,142 +634,60 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                     float dndz = (nPlus - nMinus) / (2.0 * eps);
 
                     float env = max(fadePrime(fract(p.z)), 1e-3);
-                    float a = clamp(abs(dndz) / env * 0.1, 0.0, 1.0);
-
-                    float finalAlpha = a * u_opacity;
-                    outColor = vec4(u_color * finalAlpha, finalAlpha);
-                }
-            `;
-
-            const vs100 = `
-                precision highp float;
-                attribute vec2 a_pos;
-                void main(){
-                    gl_Position = vec4(a_pos, 0.0, 1.0);
-                }
-            `;
-
-            const fs100 = `
-                precision highp float;
-                uniform vec2 u_resolution;
-                uniform float u_time;
-                uniform float u_scale;
-                uniform float u_speedZ;
-                uniform vec3 u_color;
-                uniform float u_opacity;
-                uniform vec2 u_offset;
-
-                float fade(float t){
-                    return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+                    return clamp(abs(dndz) / env * 0.1, 0.0, 1.0);
                 }
 
-                float lerp1(float a, float b, float t){
-                    return a + t * (b - a);
-                }
+                vec4 chromaticPerlin(vec2 uv){
+                    int sampleCount = max(2, int(floor(u_caSamples + 0.5)));
+                    float denom = max(float(sampleCount - 1), 1.0);
 
-                float hash13(vec3 p){
-                    return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453123);
-                }
+                    vec3 colorSum = vec3(0.0);
+                    vec3 weightSum = vec3(0.0);
+                    float alphaSum = 0.0;
+                    float alphaWeightSum = 0.0;
 
-                vec3 grad3(vec3 cell){
-                    float h = hash13(cell);
-                    float a = 6.2831853 * h;
-                    float z = h * 2.0 - 1.0;
-                    float r = sqrt(max(0.0, 1.0 - z*z));
-                    return vec3(r*cos(a), r*sin(a), z);
-                }
+                    for (int si = 0; si < sampleCount; ++si) {
+                        float i = float(si) / denom;
+                        float offset = (i - 0.5) * u_caSpread;
+                        vec2 coord = clamp(uv + (u_caCenter - uv) * offset, 0.0, 1.0);
 
-                float perlin3(vec3 p){
-                    vec3 pi = floor(p);
-                    vec3 pf = fract(p);
+                        float a = perlinAlphaAtUV(coord);
 
-                    float u = fade(pf.x);
-                    float v = fade(pf.y);
-                    float w = fade(pf.z);
+                        vec4 weight = vec4(i, 1.0 - abs(i + i - 1.0), 1.0 - i, 0.5);
+                        weight = vec4(0.5) + (weight - vec4(0.5)) * u_caContrast;
 
-                    vec3 g000 = grad3(pi + vec3(0.0,0.0,0.0));
-                    vec3 g100 = grad3(pi + vec3(1.0,0.0,0.0));
-                    vec3 g010 = grad3(pi + vec3(0.0,1.0,0.0));
-                    vec3 g110 = grad3(pi + vec3(1.0,1.0,0.0));
-                    vec3 g001 = grad3(pi + vec3(0.0,0.0,1.0));
-                    vec3 g101 = grad3(pi + vec3(1.0,0.0,1.0));
-                    vec3 g011 = grad3(pi + vec3(0.0,1.0,1.0));
-                    vec3 g111 = grad3(pi + vec3(1.0,1.0,1.0));
+                        colorSum += vec3(a * a) * weight.rgb;
+                        weightSum += weight.rgb;
+                        alphaSum += a * a * weight.a;
+                        alphaWeightSum += weight.a;
+                    }
 
-                    float n000 = dot(g000, pf - vec3(0.0,0.0,0.0));
-                    float n100 = dot(g100, pf - vec3(1.0,0.0,0.0));
-                    float n010 = dot(g010, pf - vec3(0.0,1.0,0.0));
-                    float n110 = dot(g110, pf - vec3(1.0,1.0,0.0));
-                    float n001 = dot(g001, pf - vec3(0.0,0.0,1.0));
-                    float n101 = dot(g101, pf - vec3(1.0,0.0,1.0));
-                    float n011 = dot(g011, pf - vec3(0.0,1.0,1.0));
-                    float n111 = dot(g111, pf - vec3(1.0,1.0,1.0));
+                    vec3 colorAvg = clamp(colorSum / max(weightSum, vec3(1e-4)), 0.0, 1.0);
+                    float alphaAvg = clamp(alphaSum / max(alphaWeightSum, 1e-4), 0.0, 1.0);
 
-                    float nx00 = lerp1(n000, n100, u);
-                    float nx10 = lerp1(n010, n110, u);
-                    float nx01 = lerp1(n001, n101, u);
-                    float nx11 = lerp1(n011, n111, u);
+                    vec3 color = sqrt(colorAvg);
+                    float alpha = sqrt(alphaAvg);
+                    vec3 premul = min(color, vec3(alpha));
 
-                    float nxy0 = lerp1(nx00, nx10, v);
-                    float nxy1 = lerp1(nx01, nx11, v);
-
-                    float nxyz = lerp1(nxy0, nxy1, w);
-                    float scaled = nxyz * 1.2;
-                    return clamp(scaled, -1.0, 1.0);
-                }
-
-                float fadePrime(float t){
-                    return 30.0 * t * t * (t - 1.0) * (t - 1.0);
+                    return vec4(premul, alpha);
                 }
 
                 void main(){
                     float width = u_resolution.x;
                     float height = u_resolution.y;
+                    vec2 uv = vec2(gl_FragCoord.x, height - gl_FragCoord.y) / vec2(width, height);
 
-                    float minDim = min(width, height);
-                    vec2 xy = (vec2(gl_FragCoord.x, height - gl_FragCoord.y) - 0.5 * vec2(width, height)) / minDim + u_offset;
+                    vec4 chroma = chromaticPerlin(uv);
 
-                    float phase = perlin3(vec3(xy * (u_scale * 0.15) + vec2(5.2, -3.7), 0.0));
-                    float z = u_time * u_speedZ + phase * 3.5;
-                    vec3 p = vec3(xy * u_scale + vec2(17.3, -9.1), z);
+                    float finalAlpha = chroma.a * u_opacity;
+                    vec3 finalRgb = chroma.rgb * u_color * u_opacity;
 
-                    float n = perlin3(p);
-
-                    float eps = 0.02;
-                    float nPlus  = perlin3(p + vec3(0.0, 0.0, eps));
-                    float nMinus = perlin3(p - vec3(0.0, 0.0, eps));
-                    float dndz = (nPlus - nMinus) / (2.0 * eps);
-
-                    float env = max(fadePrime(fract(p.z)), 1e-3);
-                    float a = clamp(abs(dndz) / env * 0.1, 0.0, 1.0);
-
-                    float finalAlpha = a * u_opacity;
-                    gl_FragColor = vec4(u_color * finalAlpha, finalAlpha);
+                    outColor = vec4(finalRgb, finalAlpha);
                 }
             `;
 
-            let program;
-            let vao = null;
-            let buf = null;
-            let aPosLoc = -1;
-
-            if (isWebGL2) {
-                program = createProgram(vs300, fs300);
-                vao = gl.createVertexArray();
-                gl.bindVertexArray(vao);
-                gl.bindVertexArray(null);
-            } else {
-                program = createProgram(vs100, fs100);
-                aPosLoc = gl.getAttribLocation(program, "a_pos");
-                buf = gl.createBuffer();
-                gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-                    -1, -1,
-                    3, -1,
-                    -1, 3
-                ]), gl.STATIC_DRAW);
-                gl.bindBuffer(gl.ARRAY_BUFFER, null);
-            }
+            const program = createProgram(vsSrc, fsSrc);
+            const vao = gl.createVertexArray();
 
             const uRes = gl.getUniformLocation(program, "u_resolution");
             const uTime = gl.getUniformLocation(program, "u_time");
@@ -671,6 +696,10 @@ const PerlinNoise = forwardRef(function PerlinNoise({
             const uColor = gl.getUniformLocation(program, "u_color");
             const uOpacity = gl.getUniformLocation(program, "u_opacity");
             const uOffset = gl.getUniformLocation(program, "u_offset");
+            const uCAContrast = gl.getUniformLocation(program, "u_caContrast");
+            const uCASamples = gl.getUniformLocation(program, "u_caSamples");
+            const uCASpread = gl.getUniformLocation(program, "u_caSpread");
+            const uCACenter = gl.getUniformLocation(program, "u_caCenter");
 
             gl.clearColor(0, 0, 0, 0);
 
@@ -688,6 +717,7 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                 const finalScale = BASE_SCALE / userScale;
                 const adjustedX = xRef.current * userScale;
                 const adjustedY = yRef.current * userScale;
+                const ca = getCAParams();
 
                 gl.useProgram(program);
                 gl.uniform2f(uRes, canvas.width, canvas.height);
@@ -697,21 +727,16 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                 gl.uniform3fv(uColor, colorRgbRef.current);
                 gl.uniform1f(uOpacity, opacityRef.current);
                 gl.uniform2f(uOffset, adjustedX, adjustedY);
+                gl.uniform1f(uCAContrast, ca.contrast);
+                gl.uniform1f(uCASamples, ca.samples);
+                gl.uniform1f(uCASpread, ca.spread);
+                gl.uniform2f(uCACenter, ca.centerX, ca.centerY);
 
                 gl.clear(gl.COLOR_BUFFER_BIT);
 
-                if (isWebGL2) {
-                    gl.bindVertexArray(vao);
-                    gl.drawArrays(gl.TRIANGLES, 0, 3);
-                    gl.bindVertexArray(null);
-                } else {
-                    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-                    gl.enableVertexAttribArray(aPosLoc);
-                    gl.vertexAttribPointer(aPosLoc, 2, gl.FLOAT, false, 0, 0);
-                    gl.drawArrays(gl.TRIANGLES, 0, 3);
-                    gl.disableVertexAttribArray(aPosLoc);
-                    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-                }
+                gl.bindVertexArray(vao);
+                gl.drawArrays(gl.TRIANGLES, 0, 3);
+                gl.bindVertexArray(null);
 
                 rafId = requestAnimationFrame(frame);
             };
@@ -733,7 +758,7 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                 try {
                     await startWebGPU();
                 } catch (e) {
-                    console.error("WebGPU init failed, falling back to WebGL:", e);
+                    console.error("WebGPU init failed, falling back to WebGL2:", e);
                     await startWebGL();
                 }
             } else {
