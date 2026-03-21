@@ -174,7 +174,10 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                     params2 : vec4<f32>,
                     params3 : vec4<f32>,
                 };
+
                 @group(0) @binding(0) var<uniform> U : Uniforms;
+                @group(1) @binding(0) var noiseSampler : sampler;
+                @group(1) @binding(1) var noiseTex : texture_2d<f32>;
 
                 fn fade(t: f32) -> f32 {
                     return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
@@ -292,7 +295,7 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                     return clamp(abs(dndz) / env * 0.1, 0.0, 1.0);
                 }
 
-                fn chromaticPerlin(uv: vec2<f32>) -> vec4<f32> {
+                fn chromaticFromTexture(uv: vec2<f32>) -> vec4<f32> {
                     let caContrast = U.params2.x;
                     let caSamplesF = U.params2.y;
                     let caSpread = U.params2.z;
@@ -315,7 +318,7 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                             vec2<f32>(1.0, 1.0)
                         );
 
-                        let a = perlinAlphaAtUV(coord);
+                        let a = textureSampleLevel(noiseTex, noiseSampler, coord, 0.0).r;
 
                         var weight = vec4<f32>(i, 1.0 - abs(i + i - 1.0), 1.0 - i, 0.5);
                         weight = vec4<f32>(0.5, 0.5, 0.5, 0.5) + (weight - vec4<f32>(0.5, 0.5, 0.5, 0.5)) * caContrast;
@@ -357,14 +360,21 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                 }
 
                 @fragment
-                fn fsMain(@builtin(position) fragPos: vec4<f32>) -> @location(0) vec4<f32> {
+                fn fsNoise(@builtin(position) fragPos: vec4<f32>) -> @location(0) vec4<f32> {
+                    let uv = fragPos.xy / vec2<f32>(U.params0.x, U.params0.y);
+                    let a = perlinAlphaAtUV(uv);
+                    return vec4<f32>(a, a, a, 1.0);
+                }
+
+                @fragment
+                fn fsComposite(@builtin(position) fragPos: vec4<f32>) -> @location(0) vec4<f32> {
                     let width = U.params0.x;
                     let height = U.params0.y;
                     let opacity = U.params1.y;
                     let baseColor = U.params3.yzw;
 
                     let uv = fragPos.xy / vec2<f32>(width, height);
-                    let chroma = chromaticPerlin(uv);
+                    let chroma = chromaticFromTexture(uv);
 
                     let finalAlpha = chroma.a * opacity;
                     let finalRgb = chroma.rgb * baseColor * opacity;
@@ -375,31 +385,95 @@ const PerlinNoise = forwardRef(function PerlinNoise({
 
             const module = device.createShaderModule({code: shaderCode});
 
-            const bindGroupLayout = device.createBindGroupLayout({
+            const uniformBindGroupLayout = device.createBindGroupLayout({
                 entries: [
                     {binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: {type: "uniform"}},
                 ],
             });
 
-            const pipeline = device.createRenderPipeline({
-                layout: device.createPipelineLayout({bindGroupLayouts: [bindGroupLayout]}),
+            const sampleBindGroupLayout = device.createBindGroupLayout({
+                entries: [
+                    {binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: {type: "filtering"}},
+                    {binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: {sampleType: "float"}},
+                ],
+            });
+
+            const noisePipeline = device.createRenderPipeline({
+                layout: device.createPipelineLayout({bindGroupLayouts: [uniformBindGroupLayout]}),
                 vertex: {module, entryPoint: "vsMain"},
-                fragment: {module, entryPoint: "fsMain", targets: [{format}]},
+                fragment: {module, entryPoint: "fsNoise", targets: [{format: "rgba8unorm"}]},
                 primitive: {topology: "triangle-list"},
             });
 
-            const bindGroup = device.createBindGroup({
-                layout: bindGroupLayout,
+            const compositePipeline = device.createRenderPipeline({
+                layout: device.createPipelineLayout({bindGroupLayouts: [uniformBindGroupLayout, sampleBindGroupLayout]}),
+                vertex: {module, entryPoint: "vsMain"},
+                fragment: {module, entryPoint: "fsComposite", targets: [{format}]},
+                primitive: {topology: "triangle-list"},
+            });
+
+            const uniformBindGroup = device.createBindGroup({
+                layout: uniformBindGroupLayout,
                 entries: [{binding: 0, resource: {buffer: uniformBuffer}}],
             });
 
+            const sampler = device.createSampler({
+                magFilter: "linear",
+                minFilter: "linear",
+                mipmapFilter: "linear",
+                addressModeU: "clamp-to-edge",
+                addressModeV: "clamp-to-edge",
+            });
+
+            let offscreenTexture = null;
+            let offscreenView = null;
+            let sampleBindGroup = null;
+            let configured = false;
+            let offscreenW = 0;
+            let offscreenH = 0;
+
+            const ensureOffscreen = (w, h) => {
+                if (offscreenTexture && offscreenW === w && offscreenH === h) return;
+
+                if (offscreenTexture) offscreenTexture.destroy();
+
+                offscreenTexture = device.createTexture({
+                    size: [w, h],
+                    format: "rgba8unorm",
+                    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+                });
+
+                offscreenView = offscreenTexture.createView();
+                sampleBindGroup = device.createBindGroup({
+                    layout: sampleBindGroupLayout,
+                    entries: [
+                        {binding: 0, resource: sampler},
+                        {binding: 1, resource: offscreenView},
+                    ],
+                });
+
+                offscreenW = w;
+                offscreenH = h;
+            };
+
             const configure = () => {
                 const {w, h} = getSize();
-                if (canvas.width !== w || canvas.height !== h) {
+                const resized = canvas.width !== w || canvas.height !== h;
+
+                if (resized) {
                     canvas.width = w;
                     canvas.height = h;
                 }
-                context.configure({device, format, alphaMode: "premultiplied"});
+
+                if (resized || !configured) {
+                    context.configure({
+                        device,
+                        format,
+                        alphaMode: "premultiplied",
+                    });
+                    ensureOffscreen(w, h);
+                    configured = true;
+                }
             };
 
             activeConfigure = configure;
@@ -435,7 +509,22 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                 );
 
                 const encoder = device.createCommandEncoder();
-                const pass = encoder.beginRenderPass({
+
+                const noisePass = encoder.beginRenderPass({
+                    colorAttachments: [{
+                        view: offscreenView,
+                        loadOp: "clear",
+                        storeOp: "store",
+                        clearValue: {r: 0, g: 0, b: 0, a: 1},
+                    }],
+                });
+
+                noisePass.setPipeline(noisePipeline);
+                noisePass.setBindGroup(0, uniformBindGroup);
+                noisePass.draw(3);
+                noisePass.end();
+
+                const compositePass = encoder.beginRenderPass({
                     colorAttachments: [{
                         view: context.getCurrentTexture().createView(),
                         loadOp: "clear",
@@ -444,10 +533,11 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                     }],
                 });
 
-                pass.setPipeline(pipeline);
-                pass.setBindGroup(0, bindGroup);
-                pass.draw(3);
-                pass.end();
+                compositePass.setPipeline(compositePipeline);
+                compositePass.setBindGroup(0, uniformBindGroup);
+                compositePass.setBindGroup(1, sampleBindGroup);
+                compositePass.draw(3);
+                compositePass.end();
 
                 device.queue.submit([encoder.finish()]);
                 rafId = requestAnimationFrame(frame);
@@ -464,21 +554,8 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                 premultipliedAlpha: true,
             });
             if (!gl) {
-                console.error("WebGL2 is not supported in this browser.");
-                return;
+                throw new Error("WebGL2 is not supported in this browser.");
             }
-
-            const configure = () => {
-                const {w, h} = getSize();
-                if (canvas.width !== w || canvas.height !== h) {
-                    canvas.width = w;
-                    canvas.height = h;
-                }
-                gl.viewport(0, 0, canvas.width, canvas.height);
-            };
-
-            activeConfigure = configure;
-            configure();
 
             const compileShader = (type, src) => {
                 const sh = gl.createShader(type);
@@ -511,32 +588,33 @@ const PerlinNoise = forwardRef(function PerlinNoise({
 
             const vsSrc = `#version 300 es
                 precision highp float;
+
                 const vec2 P[3] = vec2[3](
                     vec2(-1.0, -1.0),
                     vec2( 3.0, -1.0),
                     vec2(-1.0,  3.0)
                 );
-                void main(){
-                    gl_Position = vec4(P[gl_VertexID], 0.0, 1.0);
+
+                out vec2 v_uv;
+
+                void main() {
+                    vec2 pos = P[gl_VertexID];
+                    gl_Position = vec4(pos, 0.0, 1.0);
+                    v_uv = pos * 0.5 + 0.5;
                 }
             `;
 
-            const fsSrc = `#version 300 es
+            const fsNoiseSrc = `#version 300 es
                 precision highp float;
                 precision highp int;
+
+                in vec2 v_uv;
 
                 uniform vec2 u_resolution;
                 uniform float u_time;
                 uniform float u_scale;
                 uniform float u_speedZ;
-                uniform vec3 u_color;
-                uniform float u_opacity;
                 uniform vec2 u_offset;
-
-                uniform float u_caContrast;
-                uniform float u_caSamples;
-                uniform float u_caSpread;
-                uniform vec2 u_caCenter;
 
                 out vec4 outColor;
 
@@ -637,7 +715,31 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                     return clamp(abs(dndz) / env * 0.1, 0.0, 1.0);
                 }
 
-                vec4 chromaticPerlin(vec2 uv){
+                void main(){
+                    vec2 uvScreen = vec2(v_uv.x, 1.0 - v_uv.y);
+                    float a = perlinAlphaAtUV(uvScreen);
+                    outColor = vec4(vec3(a), 1.0);
+                }
+            `;
+
+            const fsCompositeSrc = `#version 300 es
+                precision highp float;
+                precision highp int;
+
+                in vec2 v_uv;
+
+                uniform sampler2D u_noiseTex;
+                uniform vec3 u_color;
+                uniform float u_opacity;
+
+                uniform float u_caContrast;
+                uniform float u_caSamples;
+                uniform float u_caSpread;
+                uniform vec2 u_caCenter;
+
+                out vec4 outColor;
+
+                vec4 chromaticFromTexture(vec2 uvScreen){
                     int sampleCount = max(2, int(floor(u_caSamples + 0.5)));
                     float denom = max(float(sampleCount - 1), 1.0);
 
@@ -649,9 +751,10 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                     for (int si = 0; si < sampleCount; ++si) {
                         float i = float(si) / denom;
                         float offset = (i - 0.5) * u_caSpread;
-                        vec2 coord = clamp(uv + (u_caCenter - uv) * offset, 0.0, 1.0);
+                        vec2 coord = clamp(uvScreen + (u_caCenter - uvScreen) * offset, 0.0, 1.0);
+                        vec2 texCoord = vec2(coord.x, 1.0 - coord.y);
 
-                        float a = perlinAlphaAtUV(coord);
+                        float a = texture(u_noiseTex, texCoord).r;
 
                         vec4 weight = vec4(i, 1.0 - abs(i + i - 1.0), 1.0 - i, 0.5);
                         weight = vec4(0.5) + (weight - vec4(0.5)) * u_caContrast;
@@ -673,11 +776,8 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                 }
 
                 void main(){
-                    float width = u_resolution.x;
-                    float height = u_resolution.y;
-                    vec2 uv = vec2(gl_FragCoord.x, height - gl_FragCoord.y) / vec2(width, height);
-
-                    vec4 chroma = chromaticPerlin(uv);
+                    vec2 uvScreen = vec2(v_uv.x, 1.0 - v_uv.y);
+                    vec4 chroma = chromaticFromTexture(uvScreen);
 
                     float finalAlpha = chroma.a * u_opacity;
                     vec3 finalRgb = chroma.rgb * u_color * u_opacity;
@@ -686,22 +786,81 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                 }
             `;
 
-            const program = createProgram(vsSrc, fsSrc);
-            const vao = gl.createVertexArray();
+            const noiseProgram = createProgram(vsSrc, fsNoiseSrc);
+            const compositeProgram = createProgram(vsSrc, fsCompositeSrc);
 
-            const uRes = gl.getUniformLocation(program, "u_resolution");
-            const uTime = gl.getUniformLocation(program, "u_time");
-            const uScale = gl.getUniformLocation(program, "u_scale");
-            const uSpeed = gl.getUniformLocation(program, "u_speedZ");
-            const uColor = gl.getUniformLocation(program, "u_color");
-            const uOpacity = gl.getUniformLocation(program, "u_opacity");
-            const uOffset = gl.getUniformLocation(program, "u_offset");
-            const uCAContrast = gl.getUniformLocation(program, "u_caContrast");
-            const uCASamples = gl.getUniformLocation(program, "u_caSamples");
-            const uCASpread = gl.getUniformLocation(program, "u_caSpread");
-            const uCACenter = gl.getUniformLocation(program, "u_caCenter");
+            const vao = gl.createVertexArray();
+            gl.bindVertexArray(vao);
+            gl.bindVertexArray(null);
+
+            const noiseURes = gl.getUniformLocation(noiseProgram, "u_resolution");
+            const noiseUTime = gl.getUniformLocation(noiseProgram, "u_time");
+            const noiseUScale = gl.getUniformLocation(noiseProgram, "u_scale");
+            const noiseUSpeed = gl.getUniformLocation(noiseProgram, "u_speedZ");
+            const noiseUOffset = gl.getUniformLocation(noiseProgram, "u_offset");
+
+            const compUNoiseTex = gl.getUniformLocation(compositeProgram, "u_noiseTex");
+            const compUColor = gl.getUniformLocation(compositeProgram, "u_color");
+            const compUOpacity = gl.getUniformLocation(compositeProgram, "u_opacity");
+            const compUCAContrast = gl.getUniformLocation(compositeProgram, "u_caContrast");
+            const compUCASamples = gl.getUniformLocation(compositeProgram, "u_caSamples");
+            const compUCASpread = gl.getUniformLocation(compositeProgram, "u_caSpread");
+            const compUCACenter = gl.getUniformLocation(compositeProgram, "u_caCenter");
+
+            let offscreenTex = null;
+            let offscreenFbo = null;
+            let offscreenW = 0;
+            let offscreenH = 0;
+
+            const createOffscreen = (w, h) => {
+                if (offscreenTex) gl.deleteTexture(offscreenTex);
+                if (offscreenFbo) gl.deleteFramebuffer(offscreenFbo);
+
+                offscreenTex = gl.createTexture();
+                gl.bindTexture(gl.TEXTURE_2D, offscreenTex);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+                offscreenFbo = gl.createFramebuffer();
+                gl.bindFramebuffer(gl.FRAMEBUFFER, offscreenFbo);
+                gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, offscreenTex, 0);
+
+                const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+                if (status !== gl.FRAMEBUFFER_COMPLETE) {
+                    throw new Error(`Framebuffer incomplete: ${status}`);
+                }
+
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+                gl.bindTexture(gl.TEXTURE_2D, null);
+
+                offscreenW = w;
+                offscreenH = h;
+            };
+
+            const configure = () => {
+                const {w, h} = getSize();
+                const resized = canvas.width !== w || canvas.height !== h;
+
+                if (resized) {
+                    canvas.width = w;
+                    canvas.height = h;
+                }
+
+                if (!offscreenTex || offscreenW !== w || offscreenH !== h) {
+                    createOffscreen(w, h);
+                }
+            };
+
+            activeConfigure = configure;
+            configure();
 
             gl.clearColor(0, 0, 0, 0);
+            gl.disable(gl.DEPTH_TEST);
+            gl.disable(gl.CULL_FACE);
+            gl.disable(gl.BLEND);
 
             const frame = (tMs) => {
                 if (destroyed) return;
@@ -719,23 +878,35 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                 const adjustedY = yRef.current * userScale;
                 const ca = getCAParams();
 
-                gl.useProgram(program);
-                gl.uniform2f(uRes, canvas.width, canvas.height);
-                gl.uniform1f(uTime, t);
-                gl.uniform1f(uScale, finalScale);
-                gl.uniform1f(uSpeed, speedZ);
-                gl.uniform3fv(uColor, colorRgbRef.current);
-                gl.uniform1f(uOpacity, opacityRef.current);
-                gl.uniform2f(uOffset, adjustedX, adjustedY);
-                gl.uniform1f(uCAContrast, ca.contrast);
-                gl.uniform1f(uCASamples, ca.samples);
-                gl.uniform1f(uCASpread, ca.spread);
-                gl.uniform2f(uCACenter, ca.centerX, ca.centerY);
-
-                gl.clear(gl.COLOR_BUFFER_BIT);
-
                 gl.bindVertexArray(vao);
+
+                gl.bindFramebuffer(gl.FRAMEBUFFER, offscreenFbo);
+                gl.viewport(0, 0, canvas.width, canvas.height);
+                gl.useProgram(noiseProgram);
+                gl.uniform2f(noiseURes, canvas.width, canvas.height);
+                gl.uniform1f(noiseUTime, t);
+                gl.uniform1f(noiseUScale, finalScale);
+                gl.uniform1f(noiseUSpeed, speedZ);
+                gl.uniform2f(noiseUOffset, adjustedX, adjustedY);
+                gl.clear(gl.COLOR_BUFFER_BIT);
                 gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+                gl.viewport(0, 0, canvas.width, canvas.height);
+                gl.useProgram(compositeProgram);
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, offscreenTex);
+                gl.uniform1i(compUNoiseTex, 0);
+                gl.uniform3fv(compUColor, colorRgbRef.current);
+                gl.uniform1f(compUOpacity, opacityRef.current);
+                gl.uniform1f(compUCAContrast, ca.contrast);
+                gl.uniform1f(compUCASamples, ca.samples);
+                gl.uniform1f(compUCASpread, ca.spread);
+                gl.uniform2f(compUCACenter, ca.centerX, ca.centerY);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+                gl.bindTexture(gl.TEXTURE_2D, null);
                 gl.bindVertexArray(null);
 
                 rafId = requestAnimationFrame(frame);
