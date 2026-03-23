@@ -28,6 +28,8 @@ const PerlinNoise = forwardRef(function PerlinNoise({
     children,
     color = "#ffffff",
     opacity = 1,
+    backgroundColor = "#000000",
+    backgroundOpacity = 0,
     scale = 1,
     x = 0,
     y = 0,
@@ -43,6 +45,8 @@ const PerlinNoise = forwardRef(function PerlinNoise({
     const canvasRef = useRef(null);
     const colorRgbRef = useRef(parseHexColor(color));
     const opacityRef = useRef(opacity);
+    const backgroundColorRgbRef = useRef(parseHexColor(backgroundColor));
+    const backgroundOpacityRef = useRef(backgroundOpacity);
     const scaleRef = useRef(scale);
     const xRef = useRef(x);
     const yRef = useRef(y);
@@ -60,6 +64,14 @@ const PerlinNoise = forwardRef(function PerlinNoise({
     useEffect(() => {
         opacityRef.current = opacity;
     }, [opacity]);
+
+    useEffect(() => {
+        backgroundColorRgbRef.current = parseHexColor(backgroundColor);
+    }, [backgroundColor]);
+
+    useEffect(() => {
+        backgroundOpacityRef.current = backgroundOpacity;
+    }, [backgroundOpacity]);
 
     useEffect(() => {
         scaleRef.current = scale;
@@ -163,7 +175,7 @@ const PerlinNoise = forwardRef(function PerlinNoise({
             const format = navigator.gpu.getPreferredCanvasFormat();
 
             const uniformBuffer = device.createBuffer({
-                size: 64,
+                size: 80,
                 usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
             });
 
@@ -173,6 +185,7 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                     params1 : vec4<f32>,
                     params2 : vec4<f32>,
                     params3 : vec4<f32>,
+                    params4 : vec4<f32>,
                 };
 
                 @group(0) @binding(0) var<uniform> U : Uniforms;
@@ -372,14 +385,20 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                     let height = U.params0.y;
                     let opacity = U.params1.y;
                     let baseColor = U.params3.yzw;
+                    let bgColor = U.params4.xyz;
+                    let bgOpacity = U.params4.w;
 
                     let uv = fragPos.xy / vec2<f32>(width, height);
                     let chroma = chromaticFromTexture(uv);
 
-                    let finalAlpha = chroma.a * opacity;
-                    let finalRgb = chroma.rgb * baseColor * opacity;
+                    let srcAlpha = chroma.a * opacity;
+                    let srcPremul = chroma.rgb * baseColor * opacity;
 
-                    return vec4<f32>(finalRgb, finalAlpha);
+                    let bgPremul = bgColor * bgOpacity;
+                    let outPremul = srcPremul + bgPremul * (1.0 - srcAlpha);
+                    let outAlpha = srcAlpha + bgOpacity * (1.0 - srcAlpha);
+
+                    return vec4<f32>(outPremul, outAlpha);
                 }
             `;
 
@@ -492,6 +511,7 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                 const w = canvas.width;
                 const h = canvas.height;
                 const [r, g, b] = colorRgbRef.current;
+                const [bgR, bgG, bgB] = backgroundColorRgbRef.current;
                 const userScale = Math.max(scaleRef.current, 0.001);
                 const finalScale = BASE_SCALE / userScale;
                 const adjustedX = xRef.current * userScale;
@@ -504,7 +524,8 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                         w, h, t, finalScale,
                         speedZ, opacityRef.current, adjustedX, adjustedY,
                         ca.contrast, ca.samples, ca.spread, ca.centerX,
-                        ca.centerY, r, g, b
+                        ca.centerY, r, g, b,
+                        bgR, bgG, bgB, backgroundOpacityRef.current,
                     ])
                 );
 
@@ -731,6 +752,8 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                 uniform sampler2D u_noiseTex;
                 uniform vec3 u_color;
                 uniform float u_opacity;
+                uniform vec3 u_bgColor;
+                uniform float u_bgOpacity;
 
                 uniform float u_caContrast;
                 uniform float u_caSamples;
@@ -779,10 +802,14 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                     vec2 uvScreen = vec2(v_uv.x, 1.0 - v_uv.y);
                     vec4 chroma = chromaticFromTexture(uvScreen);
 
-                    float finalAlpha = chroma.a * u_opacity;
-                    vec3 finalRgb = chroma.rgb * u_color * u_opacity;
+                    float srcAlpha = chroma.a * u_opacity;
+                    vec3 srcPremul = chroma.rgb * u_color * u_opacity;
 
-                    outColor = vec4(finalRgb, finalAlpha);
+                    vec3 bgPremul = u_bgColor * u_bgOpacity;
+                    vec3 outPremul = srcPremul + bgPremul * (1.0 - srcAlpha);
+                    float outAlpha = srcAlpha + u_bgOpacity * (1.0 - srcAlpha);
+
+                    outColor = vec4(outPremul, outAlpha);
                 }
             `;
 
@@ -802,6 +829,8 @@ const PerlinNoise = forwardRef(function PerlinNoise({
             const compUNoiseTex = gl.getUniformLocation(compositeProgram, "u_noiseTex");
             const compUColor = gl.getUniformLocation(compositeProgram, "u_color");
             const compUOpacity = gl.getUniformLocation(compositeProgram, "u_opacity");
+            const compUBgColor = gl.getUniformLocation(compositeProgram, "u_bgColor");
+            const compUBgOpacity = gl.getUniformLocation(compositeProgram, "u_bgOpacity");
             const compUCAContrast = gl.getUniformLocation(compositeProgram, "u_caContrast");
             const compUCASamples = gl.getUniformLocation(compositeProgram, "u_caSamples");
             const compUCASpread = gl.getUniformLocation(compositeProgram, "u_caSpread");
@@ -899,6 +928,8 @@ const PerlinNoise = forwardRef(function PerlinNoise({
                 gl.uniform1i(compUNoiseTex, 0);
                 gl.uniform3fv(compUColor, colorRgbRef.current);
                 gl.uniform1f(compUOpacity, opacityRef.current);
+                gl.uniform3fv(compUBgColor, backgroundColorRgbRef.current);
+                gl.uniform1f(compUBgOpacity, backgroundOpacityRef.current);
                 gl.uniform1f(compUCAContrast, ca.contrast);
                 gl.uniform1f(compUCASamples, ca.samples);
                 gl.uniform1f(compUCASpread, ca.spread);
