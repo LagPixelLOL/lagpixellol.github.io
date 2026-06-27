@@ -45,7 +45,7 @@ export default function App() {
     }, []);
 
     const textWrapperStyle = "flex items-center bg-white/8 backdrop-blur-[5px] px-[3cqw] py-[2cqw] outline outline-offset-3 outline-white/50 rounded-[8cqw]";
-    const textStyle = "text-[4.5cqw]";
+    const textStyle = "text-[4.5cqw] font-content";
 
     const blockWrapperCommonStyle = "flex justify-center items-center mt-[70px]";
     const blockCommonProps = {

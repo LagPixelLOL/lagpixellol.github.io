@@ -16,12 +16,23 @@
     font-style: normal;
 }
 
+@font-face {
+    font-family: "Quicksand Regular";
+    src: url("./assets/fonts/Quicksand-Regular.woff2");
+    font-weight: 400;
+    font-style: normal;
+}
+
 @theme {
     --font-pixel-s: "FusionPixel Latin S", sans-serif;
 }
 
 @theme {
     --font-pixel-l: "FusionPixel HanT L", sans-serif;
+}
+
+@theme {
+    --font-content: "Quicksand Regular", sans-serif;
 }
 
 @layer base {
