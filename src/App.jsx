@@ -1,20 +1,28 @@
 import {twMerge} from "tailwind-merge"
 import SimpleBar from "simplebar-react"
 import {useState, useRef, useEffect} from "react"
-import DottedGrid from "./components/DottedGrid.jsx"
+import Marquee3D from "./components/Marquee3D.jsx"
 import SineCircle from "./components/SineCircle.jsx"
 import PerlinNoise from "./components/PerlinNoise.jsx"
 import BigCharacter from "./components/BigCharacter.jsx"
+import quicksandBoldFont from "./assets/fonts/Quicksand-Bold.ttf"
 import foxboyRainbowImg from "./assets/images/foxboy_rainbow.avif"
-import PSIconsOverlay from "./components/PSIconsOverlay.jsx"
 
 export default function App() {
     const [isHoveredList, setIsHoveredList] = useState(Array(5).fill(false));
+    const [isPortrait, setIsPortrait] = useState(() => window.matchMedia("(orientation: portrait)").matches);
     const [gridMarginTop, setGridMarginTop] = useState(0);
     const sidebarHoveredColors = ["#6366f1", "#14b8a6", "#f59e0b", "#ef4444", "#84cc16"];
 
     const simpleBarRef = useRef(null);
     const gridRef = useRef(null);
+
+    useEffect(() => {
+        const mql = window.matchMedia("(orientation: portrait)");
+        const onChange = (event) => setIsPortrait(event.matches);
+        mql.addEventListener("change", onChange);
+        return () => mql.removeEventListener("change", onChange);
+    }, []);
 
     useEffect(() => {
         const calculateMarginTop = () => {
@@ -44,7 +52,7 @@ export default function App() {
         return () => resizeObserver.disconnect();
     }, []);
 
-    const textWrapperStyle = "flex items-center bg-white/8 backdrop-blur-[5px] px-[3cqw] py-[2cqw] outline outline-offset-3 outline-white/50 rounded-[8cqw]";
+    const textWrapperStyle = "flex items-center bg-[#2a2a2a]/50 backdrop-blur-[5px] px-[3cqw] py-[2cqw] outline outline-offset-3 outline-white/50 rounded-[8cqw]";
     const textStyle = "text-[4.5cqw] font-content";
 
     const blockWrapperCommonStyle = "flex justify-center items-center mt-[70px]";
@@ -55,8 +63,31 @@ export default function App() {
     };
 
     return (
-        <DottedGrid className="w-dvw h-dvh">
-            <PSIconsOverlay/>
+        <Marquee3D
+            className="w-dvw h-dvh"
+            text="v2ray"
+            fontUrl={quicksandBoldFont}
+            columns={isPortrait}
+            count={6}
+            textSpacing={0.5}
+            lineSpacing={0.25}
+            speed={0.003}
+            stagger={0.33}
+            outlineWidth={0.01}
+            outlineColor="#505050"
+            filled={0.1}
+            depth={0.075}
+            angle={0}
+            faceColor="#f8f8f8"
+            sideColor="#000000"
+            shadow={false}
+            gradient={true}
+            gradientColor="#f81414"
+            gradientRepeat={0.33}
+            gradientSpeed={0.5}
+            gradientInvert={false}
+            background="#0e0e0e"
+        >
             <div className={`
                 flex flex-col justify-start items-center absolute z-69420 top-0 left-0 w-[40px] h-[50vh] ml-[20px] pt-[8px]
                 border rounded-b-full border-transparent outline outline-offset-2 outline-white/75
@@ -115,6 +146,6 @@ export default function App() {
                     <footer className="text-center mt-auto pt-[50px] pb-[10px] font-mono">Made with GEX && React && Tailwind</footer>
                 </div>
             </SimpleBar>
-        </DottedGrid>
+        </Marquee3D>
     );
 }

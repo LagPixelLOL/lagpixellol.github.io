@@ -1,11 +1,21 @@
-import {useState} from "react"
+import {useId, useState} from "react"
 import {twMerge} from "tailwind-merge"
 
 export default function BigCharacter({className, children, bgImageStyle, ...props}) {
     const [isHovered, setIsHovered] = useState(false);
+    const clipId = useId();
 
-    const wrapperCommonClassName = "absolute inset-0 flex justify-center items-center overflow-hidden";
-    const spanCommonClassName = "translate-x-[3.5cqw] -translate-y-[4cqw] before:content-[attr(data-text)] before:font-pixel-l before:text-[85cqw] before:text-transparent before:text-shadow-none";
+    // 85cqw glyph, visually centered with a (3.5cqw, -4cqw) nudge like the old
+    // span layout. Positioned via start anchor + alphabetic baseline with
+    // pre-measured constants instead of textAnchor="middle" +
+    // dominantBaseline="central": those adjustments are resolved from font
+    // metrics, and Chromium resolves them differently (fallback/quantized
+    // metrics) for text inside a <clipPath>, which shifted the clipped layers
+    // off the visible glyph. A bare (x, y) start point involves no metrics at
+    // all, so both copies land identically.
+    const x = 11;
+    const y = 81.25;
+    const fontSize = 85;
 
     return (
         <div
@@ -14,19 +24,45 @@ export default function BigCharacter({className, children, bgImageStyle, ...prop
             onMouseLeave={() => setIsHovered(false)}
             {...props}
         >
-            <div className={wrapperCommonClassName}>
-                <span 
-                    data-text={children}
-                    style={{'--bg-image': bgImageStyle, opacity: isHovered ? 1 : 0}} 
-                    className={`${spanCommonClassName} before:[background-image:var(--bg-image)] before:[-webkit-background-clip:text] transition-opacity duration-150`}
-                />
-            </div>
-            <div className={wrapperCommonClassName}>
-                <span 
-                    data-text={children}
-                    className={`${spanCommonClassName} before:[-webkit-text-stroke:3cqw_rgb(248,_248,_248)]`}
-                />
-            </div>
+            <div
+                className="absolute inset-0 backdrop-blur-[5px]"
+                style={{clipPath: `url("#${clipId}")`}}
+            />
+            <div
+                className="absolute inset-0 transition-opacity duration-150"
+                style={{backgroundImage: bgImageStyle, clipPath: `url("#${clipId}")`, opacity: isHovered ? 1 : 0}}
+            />
+            <svg
+                className="absolute inset-0 w-full h-full text-shadow-none select-none pointer-events-none"
+                viewBox="0 0 100 100"
+                aria-hidden="true"
+            >
+                <defs>
+                    <clipPath id={clipId} clipPathUnits="objectBoundingBox">
+                        {/* One objectBoundingBox unit = 100cqw (the container
+                            is square), hence the /100 copies. */}
+                        <text
+                            className="font-pixel-l"
+                            x={x / 100}
+                            y={y / 100}
+                            fontSize={fontSize / 100}
+                        >
+                            {children}
+                        </text>
+                    </clipPath>
+                </defs>
+                <text
+                    className="font-pixel-l"
+                    x={x}
+                    y={y}
+                    fontSize={fontSize}
+                    fill="none"
+                    stroke="rgb(248, 248, 248)"
+                    strokeWidth="3.33"
+                >
+                    {children}
+                </text>
+            </svg>
         </div>
     );
 }
