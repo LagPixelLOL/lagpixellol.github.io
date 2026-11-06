@@ -118,7 +118,7 @@ export default function App() {
                         className="grid grid-cols-2 w-full max-w-[50cqh] mx-auto [&>*]:aspect-square [&>*]:break-words @container"
                     >
                         <div className={textWrapperStyle}>
-                            <p className={textStyle}>My username is typically v2ray, also known as LagPixelLOL.</p>
+                            <p className={textStyle}>Oh, you're not scared of a spider? That's brave! I'm not going to eat you. I'm not going to hurt you. I'm just like you.</p>
                         </div>
                         <BigCharacter bgImageStyle={`linear-gradient(in oklab, ${sidebarHoveredColors[1]}, ${sidebarHoveredColors[2]})`}>魏</BigCharacter>
                         <BigCharacter bgImageStyle={`linear-gradient(in oklab, ${sidebarHoveredColors[2]}, ${sidebarHoveredColors[0]})`}>爾</BigCharacter>
@@ -130,7 +130,10 @@ export default function App() {
                             </p>
                         </div>
                         <div className={textWrapperStyle}>
-                            <p className={textStyle}>Lead of Project Looking Glass, operator of Straylight, searching for Rainbows in Starlights.</p>
+                            <p className={textStyle}>
+                                I'm going to spin my web in the middle of your room.<br/>
+                                You're not going to be able to run away from me.
+                            </p>
                         </div>
                         <BigCharacter bgImageStyle={`linear-gradient(in oklab, ${sidebarHoveredColors[0]}, ${sidebarHoveredColors[4]})`}>睿</BigCharacter>
                     </div>
@@ -143,7 +146,7 @@ export default function App() {
                     <div className={twMerge(blockWrapperCommonStyle, "h-[100px]")}>
                         <PerlinNoise x={23} y={34} {...blockCommonProps}/>
                     </div>
-                    <footer className="text-center mt-auto pt-[50px] pb-[10px] font-mono">Made with GEX && React && Tailwind</footer>
+                    <footer className="text-center mt-auto pt-[50px] pb-[10px] font-content whitespace-pre-line">{"I'm going to wait for you to come closer...\n".repeat(10).trim()}</footer>
                 </div>
             </SimpleBar>
         </Marquee3D>
